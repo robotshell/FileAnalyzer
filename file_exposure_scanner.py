@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
 
-import requests
-import re
-import json
-import sys
-import os
-import tempfile
+import requests, re, json, sys, os, argparse, tempfile
+from tqdm import tqdm
+from colorama import Fore, Style, init
 
 import pdfplumber
 from docx import Document
 from openpyxl import load_workbook
 from pptx import Presentation
 
+init(autoreset=True)
+
 # =========================
-# REGEX RULES (hardcoded)
+# REGEX RULES
 # =========================
 
 EMAIL_REGEX = r"[a-zA-Z0-9._%+-]+@company\.com"
@@ -29,7 +28,7 @@ REGEX_RULES = {
 }
 
 # =========================
-# SCORING
+# RISK
 # =========================
 
 def calculate_risk(score):
@@ -40,17 +39,22 @@ def calculate_risk(score):
     return "LOW"
 
 # =========================
-# FILE DOWNLOAD
+# DOWNLOAD
 # =========================
 
-def download_file(url):
+def download_file(url, timeout, max_size):
     try:
-        r = requests.get(url, timeout=10, stream=True)
+        r = requests.get(url, timeout=timeout, stream=True)
         if r.status_code != 200:
+            return None
+
+        size = int(r.headers.get("Content-Length", 0))
+        if size > max_size:
             return None
 
         suffix = os.path.splitext(url)[1]
         tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+
         for chunk in r.iter_content(1024):
             tmp.write(chunk)
         tmp.close()
@@ -64,8 +68,7 @@ def download_file(url):
 # =========================
 
 def extract_text(file_path):
-    text = ""
-    metadata = []
+    text, metadata = "", []
 
     try:
         if file_path.endswith(".pdf"):
@@ -73,8 +76,7 @@ def extract_text(file_path):
                 for page in pdf.pages:
                     text += page.extract_text() or ""
                 if pdf.metadata:
-                    for k, v in pdf.metadata.items():
-                        metadata.append(f"{k}: {v}")
+                    metadata.extend([f"{k}: {v}" for k, v in pdf.metadata.items()])
 
         elif file_path.endswith(".docx"):
             doc = Document(file_path)
@@ -108,16 +110,13 @@ def extract_text(file_path):
 # =========================
 
 def analyze(text, keywords):
-    findings = []
-    score = 0
+    findings, score = [], 0
 
-    # Keywords
     for kw in keywords:
         if kw.lower() in text.lower():
             findings.append(f"Keyword found: {kw}")
             score += 10
 
-    # Regex
     for name, regex in REGEX_RULES.items():
         matches = set(re.findall(regex, text))
         for m in matches:
@@ -130,43 +129,77 @@ def analyze(text, keywords):
 # MAIN
 # =========================
 
-def main(urls_file, keywords_file):
-    with open(urls_file) as f:
+def main(args):
+    with open(args.urls) as f:
         urls = [u.strip() for u in f if u.strip()]
 
-    with open(keywords_file) as f:
+    with open(args.keywords) as f:
         keywords = [k.strip() for k in f if k.strip()]
 
     results = []
 
-    for url in urls:
-        tmp_file = download_file(url)
-        if not tmp_file:
+    print(Fore.CYAN + f"\n[+] Processing {len(urls)} files...\n")
+
+    for url in tqdm(urls, desc="Scanning", ncols=80):
+        tmp = download_file(url, args.timeout, args.max_size)
+        if not tmp:
             continue
 
-        text, metadata = extract_text(tmp_file)
-        os.unlink(tmp_file)
+        text, metadata = extract_text(tmp)
+        os.unlink(tmp)
 
         findings, score = analyze(text, keywords)
 
-        for meta in metadata:
-            findings.append(meta)
+        for m in metadata:
+            findings.append(m)
             score += 5
 
-        if findings:
-            result = {
-                "url": url,
-                "risk": calculate_risk(score),
-                "score": score,
-                "findings": findings
-            }
-            results.append(result)
+        if not findings:
+            continue
 
-    print(json.dumps(results, indent=2))
+        risk = calculate_risk(score)
+
+        if args.silent and risk != "HIGH":
+            continue
+
+        result = {
+            "url": url,
+            "risk": risk,
+            "score": score,
+            "findings": findings
+        }
+        results.append(result)
+
+        color = Fore.RED if risk == "HIGH" else Fore.YELLOW if risk == "MEDIUM" else Fore.GREEN
+        print(color + f"\n[{risk}] {url} (score: {score})")
+        for f in findings:
+            print("  └─", f)
+
+        if args.poc:
+            os.makedirs("poc", exist_ok=True)
+            fname = os.path.join("poc", re.sub(r'\W+', '_', url) + ".txt")
+            with open(fname, "w") as p:
+                p.write(url + "\n\n")
+                p.write("\n".join(findings))
+                p.write("\n\n--- TEXT EXTRACT ---\n")
+                p.write(text[:1000])
+
+    if args.json:
+        print(json.dumps(results, indent=2))
+
+# =========================
+# ARGPARSE
+# =========================
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("Usage: python file_exposure_scanner.py urls.txt keywords.txt")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(description="Sensitive File Exposure Scanner")
+    parser.add_argument("urls", help="File with URLs")
+    parser.add_argument("keywords", help="Keywords file")
+    parser.add_argument("--silent", action="store_true", help="Show only HIGH risk")
+    parser.add_argument("--json", action="store_true", help="JSON output")
+    parser.add_argument("--poc", action="store_true", help="Generate PoC files")
+    parser.add_argument("--timeout", type=int, default=10)
+    parser.add_argument("--max-size", type=int, default=10_000_000)
 
-    main(sys.argv[1], sys.argv[2])
+    args = parser.parse_args()
+    main(args)
