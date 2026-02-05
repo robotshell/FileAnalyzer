@@ -1,0 +1,20 @@
+confidential
+internal use only
+do not distribute
+restricted
+proprietary
+company confidential
+for internal use
+nda
+employee
+payroll
+invoice
+contract
+password
+api key
+secret
+token
+jira
+confluence
+slack
+vpn
