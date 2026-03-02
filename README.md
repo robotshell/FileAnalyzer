@@ -93,3 +93,15 @@ python3 FileAnalyzer.py urls.txt keywords.txt --poc --json
 ```
 PoC file generated in `poc/https___example_com_confidential_docx.txt`
 JSON file generated if `--json` is used.
+
+## 📜 License
+MIT License
+
+## 🛡️ Responsible Usage
+
+This tool is intended for:
+- Authorized security testing.
+- Bug bounty programs within scope.
+- Research environments.
+
+Important: Do not publish or register potentially private packages without authorization. Always follow responsible disclosure policies.
