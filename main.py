@@ -32,7 +32,6 @@ def process_url(url, keywords, silent, poc_dir):
     if silent and risk != "HIGH":
         return None
 
-    # PoC en texto
     if poc_dir:
         os.makedirs(poc_dir, exist_ok=True)
         fname = os.path.join(poc_dir, hash_filename(url) + ".txt")
@@ -49,9 +48,13 @@ def process_url(url, keywords, silent, poc_dir):
         "findings": findings
     }
 
+
 def main():
-    parser = argparse.ArgumentParser(description="Sensitive File Exposure Scanner (Advanced)")
-    parser.add_argument("urls", help="File with URLs")
+    parser = argparse.ArgumentParser(description="Sensitive File Exposure Scanner (Ultra Complete)")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("urls", nargs="?", help="File with URLs")
+    group.add_argument("-u", "--url", help="Single URL to scan")
+
     parser.add_argument("keywords", help="Keywords file")
     parser.add_argument("--silent", action="store_true", help="Show only HIGH risk")
     parser.add_argument("--json", action="store_true", help="JSON output")
@@ -59,19 +62,28 @@ def main():
     parser.add_argument("--threads", type=int, default=5, help="Number of concurrent threads")
     args = parser.parse_args()
 
-    with open(args.urls) as f:
-        urls = [u.strip() for u in f if u.strip()]
     with open(args.keywords) as f:
         keywords = [k.strip() for k in f if k.strip()]
 
-    print(f"\n[+] Processing {len(urls)} files with {args.threads} threads...\n")
+    urls = []
+    if args.url:
+        urls.append(args.url)
+    else:
+        with open(args.urls) as f:
+            urls = [u.strip() for u in f if u.strip()]
+
+    urls = [u for u in urls if u.lower().endswith(SUPPORTED_EXT)]
+    if not urls:
+        print("No valid URLs found with supported extensions.")
+        return
+
+    print(f"\n[+] Processing {len(urls)} file(s) with {args.threads} threads...\n")
     results = []
 
     poc_dir = "poc" if args.poc else None
 
-    # Descarga y análisis concurrente
     with ThreadPoolExecutor(max_workers=args.threads) as executor:
-        future_to_url = {executor.submit(process_url, url, keywords, args.silent, poc_dir): url for url in urls if url.lower().endswith(SUPPORTED_EXT)}
+        future_to_url = {executor.submit(process_url, url, keywords, args.silent, poc_dir): url for url in urls}
         for future in tqdm(as_completed(future_to_url), total=len(future_to_url), desc="Scanning", ncols=80):
             res = future.result()
             if not res:
@@ -83,6 +95,7 @@ def main():
 
     if args.json:
         print(json.dumps(results, indent=2))
+
 
 if __name__ == "__main__":
     main()
