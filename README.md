@@ -72,15 +72,15 @@ token
 ```
 **Basic scan**
 ```
-python3 FileAnalyzer.py urls.txt keywords.txt
+python3 main.py urls.txt keywords.txt
 ```
 **Show only high-risk findings**
 ```
-python3 FileAnalyzer.py urls.txt keywords.txt --silent
+python3 main.py urls.txt keywords.txt --silent
 ```
 **Generate PoC and JSON results**
 ```
-python3 FileAnalyzer.py urls.txt keywords.txt --poc --json
+python3 main.py urls.txt keywords.txt --poc --json
 ```
 ---
 🔍 Example output
