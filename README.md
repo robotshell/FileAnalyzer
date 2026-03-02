@@ -47,7 +47,39 @@ FileAnalyzer focuses on **confidential and corporate data**, including:
 ## 📦 Installation
 
 ```bash
-git clone https://github.com/yourusername/FileAnalyzer.python.git
-cd FileAnalyzer.python
+git clone https://github.com/yourusername/FileAnalyzer.git
+cd FileAnalyzer
 pip install -r requirements.txt
 ```
+---
+
+## ⚙️ Usage
+
+**Prepare files**
+
+1. Create a file `urls.txt` containing all the URLs of the documents to analyze (one per line):
+```
+https://example.com/confidential.docx
+https://example.com/report.pdf
+```
+2. Create a file `keywords.txt` with keywords to search:
+```
+confidential
+internal use only
+secret
+password
+token
+```
+**Basic scan**
+```
+python3 FileAnalyzer.py urls.txt keywords.txt
+```
+**Show only high-risk findings**
+```
+python3 FileAnalyzer.py urls.txt keywords.txt --silent
+```
+**Generate PoC and JSON results**
+```
+python3 FileAnalyzer.py urls.txt keywords.txt --poc --json
+```
+
