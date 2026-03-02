@@ -91,7 +91,8 @@ python3 FileAnalyzer.py urls.txt keywords.txt --poc --json
   └─ Keyword found: confidential
   └─ Author metadata: Internal User
 ```
-PoC file generated in `poc/https___example_com_confidential_docx.txt`
+PoC file generated in `poc/https___example_com_confidential_docx.txt`.
+
 JSON file generated if `--json` is used.
 
 ## 📜 License
