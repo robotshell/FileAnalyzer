@@ -51,7 +51,7 @@ git clone https://github.com/yourusername/FileAnalyzer.git
 cd FileAnalyzer
 pip install -r requirements.txt
 ```
----
+🔍 Example output
 
 ## ⚙️ Usage
 
@@ -82,4 +82,14 @@ python3 FileAnalyzer.py urls.txt keywords.txt --silent
 ```
 python3 FileAnalyzer.py urls.txt keywords.txt --poc --json
 ```
-
+---
+🔍 Example output
+```
+[HIGH] https://example.com/confidential.docx (score: 85)
+  └─ Email detected: john.doe@company.com
+  └─ IBAN detected: DE89370400440532013000
+  └─ Keyword found: confidential
+  └─ Author metadata: Internal User
+```
+PoC file generated in `poc/https___example_com_confidential_docx.txt`
+JSON file generated if `--json` is used.
