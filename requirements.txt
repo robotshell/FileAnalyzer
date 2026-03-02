@@ -1,5 +1,8 @@
-requests>=2.31.0
-pdfplumber>=0.10.3
-python-docx>=1.1.0
-openpyxl>=3.1.2
-python-pptx>=0.6.23
+requests
+tqdm
+colorama
+pdfplumber
+python-docx
+openpyxl
+python-pptx
+rapidfuzz
